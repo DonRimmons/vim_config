@@ -68,9 +68,15 @@ function! RunScript(script) abort
 
     let l:script_abs = fnamemodify(l:script_abs, ':p')
     let l:script_dir = fnamemodify(l:script_abs, ':h')
-    let l:cmd = 'cd ' . shellescape(l:script_dir) . ' && ' . shellescape(l:script_abs) . ' 2>&1'
+    let l:saved_cwd = getcwd()
+
+    execute 'lcd ' . fnameescape(l:script_dir)
+    let l:cmd = shellescape(l:script_abs) . ' 2>&1'
     let l:output = systemlist(l:cmd)
+    " resolve qf entries' relative paths against script_dir before restoring cwd
     call setqflist([], ' ', {'title': a:script, 'lines': l:output})
+    execute 'lcd ' . fnameescape(l:saved_cwd)
+
     copen
     let g:quickfix_is_open = 1
 endfunction
