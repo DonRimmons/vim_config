@@ -25,6 +25,33 @@ set splitbelow
 filetype on
 filetype plugin indent on
 
+"""""""""""""""""""""""""""""""""""
+" lsp
+"""""""""""""""""""""""""""""""""""
+autocmd User LspSetup call LspAddServer([#{
+    \    name: 'clangd',
+    \    filetype: ['c', 'cpp'],
+    \    path: '/usr/bin/clangd',
+    \    args: ['--background-index']
+    \  }])
+
+autocmd User LspSetup call LspOptionsSet(#{ showDiagWithSign: v:false, semanticHighlight: v:true })
+set signcolumn=no
+
+noremap <silent> <Leader>gd :LspGotoDefinition<CR>
+noremap <silent> <Leader>gp :LspPeekDefinition<CR>
+noremap <silent> <Leader>gr :LspShowReferences<CR>
+noremap <silent> <Leader>gs :LspSymbolSearch<CR>
+noremap <silent> <Leader>go :LspDocumentSymbol<CR>
+
+"""""""""""""""""""""""""""""""""""
+" fzf
+"""""""""""""""""""""""""""""""""""
+noremap <silent> <Leader>pf :Files<CR>
+noremap <silent> <Leader>pb :Buffers<CR>
+noremap <silent> <Leader>pg :Rg<CR>
+noremap <silent> <Leader>pt :Tags<CR>
+
 " vim does not like c11 sometimes
 let c_no_bracket_error = 1
 
@@ -82,16 +109,47 @@ function! RunScript(script) abort
 endfunction
 
 syntax enable
-let ayucolor="mirage"
+
+" some colorschemes skip clearing old highlights before defining their own,
+" so leftover groups from the previous scheme can bleed through
+augroup ClearColorsBeforeSwitch
+    autocmd!
+    autocmd ColorSchemePre * highlight clear | if exists('syntax_on') | syntax reset | endif
+augroup END
+
+"let ayucolor="mirage"
 "colorscheme None
-"colorscheme ayu
 "colorscheme PaperColor
-"colorscheme borlandp
+"colorscheme ayu
 "colorscheme borland
-colorscheme simple-dark
-"colorscheme elflord
-"colorscheme retrobox
+"colorscheme borlandp
 "colorscheme dosbox
+"colorscheme elflord
+"colorscheme nord
+"colorscheme retrobox
+"colorscheme simple-dark
+colorscheme codedark
+
+" internal palette/base files some themes source but aren't real schemes to select
+let g:colorscheme_blocklist = ['dracula_base']
+
+function! CycleColorscheme(direction) abort
+    let l:schemes = uniq(sort(map(globpath(&runtimepath, 'colors/*.vim', 0, 1), "fnamemodify(v:val, ':t:r')")))
+    let l:schemes = filter(l:schemes, 'index(g:colorscheme_blocklist, v:val) == -1')
+    let l:current = index(l:schemes, get(g:, 'colors_name', ''))
+    let l:next = (l:current + a:direction) % len(l:schemes)
+    if l:next < 0
+        let l:next += len(l:schemes)
+    endif
+    execute 'colorscheme ' . l:schemes[l:next]
+    redraw
+    echohl ModeMsg
+    echo 'colorscheme: ' . l:schemes[l:next] . ' (' . (l:next + 1) . '/' . len(l:schemes) . ')'
+    echohl None
+endfunction
+
+noremap <silent> <Leader>] :call CycleColorscheme(1)<CR>
+noremap <silent> <Leader>[ :call CycleColorscheme(-1)<CR>
 
 set tags=./.tags;/
 
@@ -129,3 +187,7 @@ inoremap <expr> <CR>    pumvisible() ? "\<C-y>" : "\<CR>"
 " Align entire file as CSV
 vnoremap <leader>ca :>!column -t <CR>
 
+
+" Align declarations so variable names line up (autoload/aligndecl.vim)
+command! -range AlignDecl call aligndecl#Align(<line1>, <line2>)
+xnoremap <silent> <Leader>a :AlignDecl<CR>
